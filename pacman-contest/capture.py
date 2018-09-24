@@ -1,3 +1,4 @@
+#coding=utf-8
 # capture.py
 # ----------
 # Licensing Information:  You are free to use or extend these projects for
@@ -34,7 +35,7 @@ Capture.py holds the logic for Pacman capture the flag.
   (ii)  The hidden secrets of pacman:
           This section contains all of the logic code that the pacman
           environment uses to decide who can move where, who dies when
-          things collide, etc.  You shouldn't need to read this section
+          things collide碰撞, etc.  You shouldn't need to read this section
           of code, but you can if you want.
 
   (iii) Framework to start a game:
@@ -63,17 +64,18 @@ import keyboardAgents
 
 # If you change these, you won't affect the server, so you can't cheat
 KILL_POINTS = 0
-SONAR_NOISE_RANGE = 13 # Must be odd
+SONAR_NOISE_RANGE = 13 # Must be odd奇数
 SONAR_NOISE_VALUES = [i - (SONAR_NOISE_RANGE - 1)/2 for i in range(SONAR_NOISE_RANGE)]
 SIGHT_RANGE = 5 # Manhattan distance
 MIN_FOOD = 2
 TOTAL_FOOD = 60
 
-DUMP_FOOD_ON_DEATH = True # if we have the gameplay element that dumps dots on death
+DUMP_FOOD_ON_DEATH = True # if we have the gameplay element that dumps dots on death死后是否掉落豆
 
 SCARED_TIME = 40
 
 def noisyDistance(pos1, pos2):
+  #曼哈顿距离+-6
   return int(util.manhattanDistance(pos1, pos2) + random.choice(SONAR_NOISE_VALUES))
 
 ###################################################
@@ -82,13 +84,13 @@ def noisyDistance(pos1, pos2):
 
 class GameState:
   """
-  A GameState specifies the full game state, including the food, capsules,
+  A 【GameState】 specifies the full game state, including the food, capsules胶囊,
   agent configurations and score changes.
 
   GameStates are used by the Game object to capture the actual state of the game and
   can be used by agents to reason about the game.
 
-  Much of the information in a GameState is stored in a GameStateData object.  We
+  Much of the information in a GameState is stored in a 【GameStateData】 object.  We
   strongly suggest that you access that data via the accessor methods below rather
   than referring to the GameStateData object directly.
   """
@@ -99,33 +101,45 @@ class GameState:
 
   def getLegalActions( self, agentIndex=0 ):
     """
+    传入agentIndex，返回其当前可选actions
     Returns the legal actions for the agent specified.
     """
     return AgentRules.getLegalActions( self, agentIndex )
 
   def generateSuccessor( self, agentIndex, action):
     """
+    返回某个agent，在当前gameState，执行完某个action，
+    之后的gameState（是个整个地图的网格数据，当敌方在范围5内，会显示对方 ）
     Returns the successor state (a GameState object) after the specified agent takes the action.
     """
     # Copy current state
     state = GameState(self)
 
-    # Find appropriate rules for the agent
+    # Find appropriate rules for the agent通过游戏规则更新gamestate
     AgentRules.applyAction( state, action, agentIndex )
     AgentRules.checkDeath(state, agentIndex)
     AgentRules.decrementTimer(state.data.agentStates[agentIndex])
 
-    # Book keeping
+    # Book keeping 记账，更新“谁移动过”，“当前分数”，“所剩时间”
     state.data._agentMoved = agentIndex
     state.data.score += state.data.scoreChange
     state.data.timeleft = self.data.timeleft - 1
     return state
-
+  
+  
   def getAgentState(self, index):
+    """
+    传入一个agentIndex，返回其当前状态。若不在范围内，会返回身份，但其余值为none。
+    格式为：当前身份，位置，运动方向
+    Ghost: (x,y)=(9.0, 13.0), East
+    Ghost: None
+    Pacman: (x,y)=(19.0, 6.0), West
+    """
     return self.data.agentStates[index]
 
   def getAgentPosition(self, index):
     """
+    如果当前传入的agent是可见的，那么返回其坐标（元组）；不可见，返回None
     Returns a location tuple if the agent with the given index is observable;
     if the agent is unobservable, returns None.
     """
@@ -136,16 +150,21 @@ class GameState:
     return ret
 
   def getNumAgents( self ):
+    """
+    返回当前游戏中agent的数量，值一直是固定的4
+    """
     return len( self.data.agentStates )
 
   def getScore( self ):
     """
+    返回当前己方的分数？
     Returns a number corresponding to the current score.
     """
     return self.data.score
 
   def getRedFood(self):
     """
+    返回红方要保护的豆，矩阵,里面全是T/F
     Returns a matrix of food that corresponds to the food on the red team's side.
     For the matrix m, m[x][y]=true if there is food in (x,y) that belongs to
     red (meaning red is protecting it, blue is trying to eat it).
@@ -154,6 +173,7 @@ class GameState:
 
   def getBlueFood(self):
     """
+    返回蓝方要保护的豆，矩阵,里面全是T/F
     Returns a matrix of food that corresponds to the food on the blue team's side.
     For the matrix m, m[x][y]=true if there is food in (x,y) that belongs to
     blue (meaning blue is protecting it, red is trying to eat it).
@@ -161,19 +181,27 @@ class GameState:
     return halfGrid(self.data.food, red = False)
 
   def getRedCapsules(self):
+    """
+    返回红方要保护的“变身胶囊”
+    """
     return halfList(self.data.capsules, self.data.food, red = True)
 
   def getBlueCapsules(self):
+    """
+    返回蓝方要保护的“变身胶囊”
+    """
     return halfList(self.data.capsules, self.data.food, red = False)
 
   def getWalls(self):
     """
+    返回一个“墙”矩阵，全是T/F
     Just like getFood but for walls
     """
     return self.data.layout.walls
 
   def hasFood(self, x, y):
     """
+    判断具体某个点是否有食物，有ture，无false
     Returns true if the location (x,y) has food, regardless of
     whether it's blue team food or red team food.
     """
@@ -181,15 +209,20 @@ class GameState:
 
   def hasWall(self, x, y):
     """
+    判断具体某个点是否有“墙”
     Returns true if (x,y) has a wall, false otherwise.
     """
     return self.data.layout.walls[x][y]
 
   def isOver( self ):
+    """
+    判断游戏是否结束，有什么用？游戏结束后，这个方法也执行不了。否则一直返回false
+    """
     return self.data._win
 
   def getRedTeamIndices(self):
     """
+    返回红队的agent索引值,格式为：[0, 2]
     Returns a list of agent index numbers for the agents on the red team.
     """
     return self.redTeam[:]
@@ -202,12 +235,15 @@ class GameState:
 
   def isOnRedTeam(self, agentIndex):
     """
+    判断某个indice是否属于红队
     Returns true if the agent with the given agentIndex is on the red team.
     """
     return self.teams[agentIndex]
 
   def getAgentDistances(self):
     """
+    返回每个agent到当前agent的粗糙距离list，
+    格式为：[4, 32, -3, 29]，对应着到0-3 agentIndices的距离。
     Returns a noisy distance to each agent.
     """
     if 'agentDistances' in dir(self) :
@@ -216,18 +252,26 @@ class GameState:
       return None
 
   def getDistanceProb(self, trueDistance, noisyDistance):
-    "Returns the probability of a noisy distance given the true distance"
+    """
+    传入实际距离和粗糙距离，计算粗糙距离的“可信度”。
+    怎么用？如果我知道真实距离，我要粗糙距离干什么用？
+    Returns the probability of a noisy distance given the true distance
+    """
     if noisyDistance - trueDistance in SONAR_NOISE_VALUES:
       return 1.0/SONAR_NOISE_RANGE
     else:
       return 0
 
   def getInitialAgentPosition(self, agentIndex):
-    "Returns the initial position of an agent."
+    """
+    根据index获取该agent的出生位置，对于同一个地图，该值是固定的。
+    Returns the initial position of an agent.
+    """
     return self.data.layout.agentPositions[agentIndex][1]
 
   def getCapsules(self):
     """
+    返回剩余的“超级胶囊”的坐标list
     Returns a list of positions (x,y) of the remaining capsules.
     """
     return self.data.capsules

@@ -1,3 +1,4 @@
+#coding=utf-8
 # myTeam.py
 # ---------
 # Licensing Information:  You are free to use or extend these projects for
@@ -60,8 +61,9 @@ class DummyAgent(CaptureAgent):
 
     A distanceCalculator instance caches the maze distances
     between each pair of positions, so your agents can use:
-    self.distancer.getDistance(p1, p2)
+    self.distancer.getDistance(p1, p2)可用该方法计算两点之间的maze距离
 
+    该方法最多执行15秒
     IMPORTANT: This method may run for at most 15 seconds.
     """
 

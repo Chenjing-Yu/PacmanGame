@@ -1,3 +1,4 @@
+#coding=utf-8
 # captureAgents.py
 # ----------------
 # Licensing Information:  You are free to use or extend these projects for
@@ -23,8 +24,12 @@ import util
 
 # Note: the following class is not used, but is kept for backwards
 # compatibility with team submissions that try to import it.
+# 没有使用，但为了向后兼容而保留，有的队伍可能引用这些类
 class AgentFactory:
-  "Generates agents for a side"
+  """
+  为一方生成agents
+  Generates agents for a side
+  """
 
   def __init__(self, isRed, **args):
     self.isRed = isRed
@@ -35,6 +40,7 @@ class AgentFactory:
 
 class RandomAgent( Agent ):
   """
+  一个纯随机选择动作的客户端
   A random agent that abides by the rules.
   """
   def __init__( self, index ):
@@ -49,6 +55,7 @@ class CaptureAgent(Agent):
   some of the complications of a two-team game.
 
   Recommended Usage:  Subclass CaptureAgent and override chooseAction.
+  推荐继承该类，重写chooseAction方法。
   """
 
   #############################
@@ -174,6 +181,7 @@ class CaptureAgent(Agent):
 
   def getFood(self, gameState):
     """
+    返回当前gamestate下，己方需要吃的豆，矩阵，里面全是T/F。
     Returns the food you're meant to eat. This is in the form of a matrix
     where m[x][y]=true if there is food you can eat (based on your team) in that square.
     """
@@ -227,6 +235,7 @@ class CaptureAgent(Agent):
 
   def getScore(self, gameState):
     """
+    返回你超过对手多少分，+表示领先，-表示落后
     Returns how much you are beating the other team by in the form of a number
     that is the difference between your score and the opponents score.  This number
     is negative if you're losing.
