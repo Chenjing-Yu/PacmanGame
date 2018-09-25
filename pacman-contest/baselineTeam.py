@@ -154,10 +154,9 @@ class ReflexCaptureAgent(CaptureAgent):
     #print "self.index=",self.index
     #print "successor=\n",successor
     pos = successor.getAgentState(self.index).getPosition()
-    #print "pos=",pos
-    #如果该位置没有豆？？？ 
-    #print "nearestPoint(pos)=",nearestPoint(pos)
+    #貌似是校准位置到地图的网格
     if pos != nearestPoint(pos):
+      print "run in here,pos=",pos,"nearestPoint(pos)",nearestPoint(pos)
       # Only half a grid position was covered
       return successor.generateSuccessor(self.index, action)
     else:
