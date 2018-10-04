@@ -224,6 +224,35 @@ class GeneralAgent(CaptureAgent):
           for d in range(1, depth):
             self.cornerDepth[path[d-1]] = max(depth-d, self.cornerDepth[path[d-1]])
 
+  def getEnemyPositions(self, gameState):
+    positions = []
+    for i in self.getOpponents(gameState):
+      pos = gameState.getAgentPosition(i)
+      if pos != None:
+        positions.append((i, pos))
+    return positions
+
+  def getEnemyDistance(self, myPos, gameState):
+    """
+    return the distance from the nearest enemy
+    """
+    positions = self.getEnemyPositions(gameState)
+    ret = 999999
+    for i, pos in positions:
+      ret = min(ret, self.getMazeDistance(myPos, pos))
+    return ret
+
+  def getDistanceToAlly(self, myPos, gameState):
+    """
+    return distance to ally
+    """
+    #ret = None
+    agents = self.agentsOnTeam
+    ally = agents[0]
+    if self.index == agents[0]:
+      ally = agents[1]
+    ret = self.getMazeDistance(myPos, gameState.getAgentState(ally).getPosition())
+    return ret + 0.1
 
   def chooseAction(self, gameState):
     """
@@ -238,9 +267,10 @@ class GeneralAgent(CaptureAgent):
     # You can profile your evaluation time by uncommenting these lines
     #可以通过下面一行代码配置evaluation time？这是啥？
     # start = time.time()
+    mode = 'attack'
 
     #与上面的actions列表相对应，返回当前state各动作的values=[-2038, -2037, -2039]
-    values = [self.evaluate(gameState, a) for a in actions]
+    values = [self.evaluate(gameState, a, mode) for a in actions]
     #print "values=", values
     #print 'eval time for agent %d: %.4f' % (self.index, time.time() - start)
 
@@ -255,8 +285,6 @@ class GeneralAgent(CaptureAgent):
     #print "foodLeft=",foodLeft
 
     if foodLeft <= 2:
-      #print "triger!index=",self.index
-      #print "current position=",gameState.getAgentPosition(self.index)
       bestDist = 9999
       for action in actions:
         #行动后的下个状态
@@ -273,20 +301,6 @@ class GeneralAgent(CaptureAgent):
           bestDist = dist
       #print "bestAction=",bestAction
       return bestAction
-    #print "getNumAgents()",gameState.getNumAgents()
-    #print "getAgentState(0)",gameState.getAgentState(0)
-    #print "getAgentState(1)",gameState.getAgentState(1)
-    #print "getAgentState(2)",gameState.getAgentState(2)
-    #print "getAgentState(3)",gameState.getAgentState(3)
-    #print "isOver()",gameState.isOver()
-    #if self.index==0:
-      #print "getAgentDistances(),0",gameState.getAgentDistances()
-      #print "getInitialAgentPosition(0)",gameState.getInitialAgentPosition(0)
-      #print "getInitialAgentPosition(1)",gameState.getInitialAgentPosition(1)
-      #print "getInitialAgentPosition(2)",gameState.getInitialAgentPosition(2)
-      #print "getInitialAgentPosition(3)",gameState.getInitialAgentPosition(3)
-    #if self.index==2:
-      #print "getAgentDistances(),2",gameState.getAgentDistances()
 
 
     #最终随机返回一个最优action
@@ -297,83 +311,86 @@ class GeneralAgent(CaptureAgent):
     Finds the next successor which is a grid position (location tuple).
     返回值是一个gamestate（游戏地图的网格数据）
     """
-    #print "gameState=\n",gameState
     successor = gameState.generateSuccessor(self.index, action)
-    #print "self.index=",self.index
-    #print "successor=\n",successor
     pos = successor.getAgentState(self.index).getPosition()
-    #貌似是校准位置到地图的网格
     if pos != nearestPoint(pos):
       print "run in here,pos=",pos,"nearestPoint(pos)",nearestPoint(pos)
-      # Only half a grid position was covered
       return successor.generateSuccessor(self.index, action)
     else:
       return successor
 
-  def evaluate(self, gameState, action):
+  def evaluate(self, gameState, action, mode):
     """
     Computes a linear combination of features and feature weights
     """
-    #print "run in evaluate"
-    features = self.getFeatures(gameState, action)
-    #print "run after here"
-    
-    weights = self.getWeights(gameState, action)
-    #print "weights=", weights
-    #if self.index==3:
-    #  print "action=",action
-    #  print "features=", features
-    #  print "features * weights=",features * weights
-    #向量点乘的积，a1*b1+a2*b2,【>0则方向基本相同，<0则方向相反】用不上这个
+    if mode == "attack":
+      features = self.getAttackFeatures(gameState, action)
+      weights = self.getAttackWeights(gameState, action)
+    elif mode == "escape":
+      features = self.getEscapeFeatures(gameState, action)
+      weights = self.getEscapeWeights(gameState, action)
+    elif mode == "defend":
+      features = self.getDefendFeatures(gameState, action)
+      weights = self.getDefendWeights(gameState, action)
+
     return features * weights
 
-  def getFeatures(self, gameState, action):
+  def getAttackFeatures(self, gameState, action):
     """
-    返回当前state的feature计数器
     Returns a counter of features for the state
     """
-    #print "run in getFeatures"
     features = util.Counter()
     successor = self.getSuccessor(gameState, action)
-    features['successorScore'] = self.getScore(successor)
-    #print "features=",features['successorScore']
-    return features
+    # next score - direct reward
+    foodList = self.getFood(successor).asList()
+    features['successorScore'] = -len(foodList) + self.getScore(successor)
+    # Compute distance to the nearest food
+    if len(foodList) > 0:
+      myPos = successor.getAgentState(self.index).getPosition()
+      minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
+      features['distanceToFood'] = minDistance
+    # compute distance to the nearest capsule
+    capsules = self.getCapsules(successor)
+    if len(capsules) > 0:
+      minDistance = min([self.getMazeDistance(myPos, capsule) for capsule in capsules])
+      features['distanceToCapsule'] = minDistance
+    else:
+      features['distanceToCapsule'] = 999999
+      # distance to the escape goals
+    features['distanceToEscape'] = min([self.getMazeDistance(myPos, home) for home in self.escapeGoals])
+    #distance to ally
+    features['distanceToAlly'] = self.getDistanceToAlly(myPos, gameState)
+    # distance to the enemy and the status of enemy (scared or not, ghost or not)
+    #todo: nearest ghost
+    features['risk'] = -self.getEnemyDistance(myPos, gameState)
 
-  def getWeights(self, gameState, action):
+    # is it a dead corner? corner depth
+      #todo
+    # hold food todo
+
+  def getAttackWeights(self, gameState, action):
     """
     Normally, weights do not depend on the gamestate.  They can be either
     a counter or a dictionary.
     """
-    #print "run in getWeights"
-    return {'successorScore': 1.0}
+    return {'successorScore': 100, 'distanceToFood': -100, 'distanceToCapsule': -50, 'distanceToEscape': -50,
+            'distanceToAlly': 50, 'risk': -100}
 
 class OffensiveReflexAgent(GeneralAgent):
   """
-  进攻agent
   A reflex agent that seeks food. This is an agent
   we give you to get an idea of what an offensive agent might look like,
   but it is by no means the best or only way to build an offensive agent.
   """
   def getFeatures(self, gameState, action):
-    #print "run in here"
-    #print "my index=",self.index
-    #print "current position=",gameState.getAgentPosition(self.index)
-    #print "self.start=",self.start
     features = util.Counter()
-    #print "my action=",action
     successor = self.getSuccessor(gameState, action)
-    #把矩阵转换成列表
     foodList = self.getFood(successor).asList()
-    #successorSocre=-剩余豆
-    features['successorScore'] = -len(foodList)#self.getScore(successor)
-    #print features
+    features['successorScore'] = -len(foodList)
     # Compute distance to the nearest food
 
     if len(foodList) > 0: # This should always be True,  but better safe than sorry
-      #下一个位置的坐标
       myPos = successor.getAgentState(self.index).getPosition()
-      #print "successor position",myPos
-      #到最近的豆的maze距离
       minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
       features['distanceToFood'] = minDistance
 
