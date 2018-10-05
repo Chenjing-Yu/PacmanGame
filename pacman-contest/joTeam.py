@@ -208,13 +208,13 @@ class GeneralAgent(CaptureAgent):
               if next in self.rewards:
                 path.append(next)
                 stack.push((next, path))
-      print("start position: ")
-      print (dot)
-      print("path number: ")
-      print(count)
-      print(aPath)
-      print(marks)
-      print(self.cornerDepth)
+      # print("start position: ")
+      # print (dot)
+      # print("path number: ")
+      # print(count)
+      # print(aPath)
+      # print(marks)
+      # print(self.cornerDepth)
       if count > 0:
         depth = 0
         for pos, mark in marks:
@@ -246,13 +246,13 @@ class GeneralAgent(CaptureAgent):
     """
     return distance to ally
     """
-    #ret = None
+    ret = None
     agents = self.agentsOnTeam
     ally = agents[0]
     if self.index == agents[0]:
       ally = agents[1]
-    ret = self.getMazeDistance(myPos, gameState.getAgentState(ally).getPosition())
-    return ret + 0.1
+      ret = self.getMazeDistance(myPos, gameState.getAgentState(ally).getPosition()) + 0.1
+    return ret
 
   def chooseAction(self, gameState):
     """
@@ -332,6 +332,8 @@ class GeneralAgent(CaptureAgent):
     elif mode == "defend":
       features = self.getDefendFeatures(gameState, action)
       weights = self.getDefendWeights(gameState, action)
+    print(features)
+    print(weights)
 
     return features * weights
 
@@ -359,8 +361,12 @@ class GeneralAgent(CaptureAgent):
       # distance to the escape goals
     features['distanceToEscape'] = min([self.getMazeDistance(myPos, home) for home in self.escapeGoals])
     #distance to ally
-    features['distanceToAlly'] = self.getDistanceToAlly(myPos, gameState)
-    # distance to the enemy and the status of enemy (scared or not, ghost or not)
+    dist = self.getDistanceToAlly(myPos, gameState)
+    if dist != None:
+      features['distanceToAlly'] = 1.0/self.getDistanceToAlly(myPos, gameState)
+    else:
+      features['distanceToAlly'] = 0
+      # distance to the enemy and the status of enemy (scared or not, ghost or not)
     #todo: nearest ghost
     features['risk'] = -self.getEnemyDistance(myPos, gameState)
 
@@ -368,13 +374,20 @@ class GeneralAgent(CaptureAgent):
       #todo
     # hold food todo
 
+    # stop
+    if action == Directions.STOP:
+      features['stop'] = 1
+    else:
+      features['stop'] = 0
+    return features
+
   def getAttackWeights(self, gameState, action):
     """
     Normally, weights do not depend on the gamestate.  They can be either
     a counter or a dictionary.
     """
-    return {'successorScore': 100, 'distanceToFood': -100, 'distanceToCapsule': -50, 'distanceToEscape': -50,
-            'distanceToAlly': 50, 'risk': -100}
+    return {'successorScore': 1000, 'distanceToFood': -10, 'distanceToCapsule': -10, 'distanceToEscape': -10,
+            'distanceToAlly': -1000, 'risk': -1000, 'stop': -5000}
 
 class OffensiveReflexAgent(GeneralAgent):
   """
