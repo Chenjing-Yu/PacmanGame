@@ -247,15 +247,46 @@ class GeneralAgent(CaptureAgent):
     for i in self.enemies:
       pos = gameState.getAgentPosition(i)
       if pos == None:
-        #todo: belief most likely distance
-        dists.append(i, self.distancer.getMazeDistances(myPos, pos))
+        pass#todo: belief most likely distance
+      else:
+        dists.append((i, self.getMazeDistance(myPos, pos)))
     return dists
+
+  def getNearestGhost(self, myPos, gameState):
+    minDistance = 999999
+    ghost = self.enemies[0]
+    for enemy in self.enemies:
+      if not gameState.getAgentState(enemy).isPacman:
+        pos = gameState.getAgentPosition(enemy)
+        if pos != None:
+          dist = self.getMazeDistance(myPos, pos)
+          if dist < minDistance:
+            ghost = enemy
+            minDistance = dist
+        else:
+          pass#todo: belief most likely distance
+    return (ghost, minDistance)
+
+  def getNearestPacman(self, myPos, gameState):
+    minDistance = 999999
+    ghost = self.enemies[0]
+    for enemy in self.enemies:
+      if gameState.getAgentState(enemy).isPacman:
+        pos = gameState.getAgentPosition(enemy)
+        if pos != None:
+          dist = self.getMazeDistance(myPos, pos)
+          if dist < minDistance:
+            ghost = enemy
+            minDistance = dist
+        else:
+          pass#todo: belief most likely distance
+    return (ghost, minDistance)
 
   def getDistanceToAlly(self, myPos, gameState):
     """
     return distance to ally
     """
-    return self.getMazeDistance(myPos, gameState.getAgentState(self.ally).getPosition()) + 0.1
+    return self.getMazeDistance(myPos, gameState.getAgentState(self.ally).getPosition())
 
   def chooseAction(self, gameState):
     """
@@ -376,19 +407,16 @@ class GeneralAgent(CaptureAgent):
     if len(capsules) > 0:
       minDistance = min([self.getMazeDistance(myPos, capsule) for capsule in capsules])
       features['distanceToCapsule'] = minDistance
+      features['pickupCapsule'] = -len(capsules)
     else:
       features['distanceToCapsule'] = 999999
       # distance to the escape goals
     features['distanceToEscape'] = min([self.getMazeDistance(myPos, home) for home in self.escapeGoals])
     #distance to ally
-    dist = self.getDistanceToAlly(myPos, gameState)
-    if dist != None:
+    if self.index == self.getTeam(gameState)[0]:
       features['distanceToAlly'] = self.getDistanceToAlly(myPos, gameState)
-    else:
-      features['distanceToAlly'] = 0
-      # distance to the enemy and the status of enemy (scared or not, ghost or not)
-    #todo: nearest ghost
-    features['distanceToEnemy'] = self.getEnemyDistance(myPos, gameState)
+      # distance to the enemy
+    features['distanceToEnemy'] = self.getNearestGhost(myPos, gameState)[1]
     # is it a dead corner? corner depth
       #todo
     # stop
@@ -404,7 +432,53 @@ class GeneralAgent(CaptureAgent):
     a counter or a dictionary.
     """
     return {'successorScore': 1000, 'distanceToFood': -100, 'distanceToCapsule': -10, 'distanceToEscape': -5,
-            'distanceToAlly': 100, 'distanceToEnemy': 200, 'stop': -5000}
+            'distanceToAlly': 100, 'distanceToEnemy': 200, 'stop': -5000, 'pickupCapsule': -5000}
+
+  def getDefendFeatures(self, gameState, action):
+    """
+    Returns a counter of features for the state
+    """
+    features = util.Counter()
+    successor = self.getSuccessor(gameState, action)
+    # next score - direct reward
+    foodList = self.getFood(successor).asList()
+    features['successorScore'] = -len(foodList) + self.getScore(successor)
+    # Compute distance to the nearest food
+    if len(foodList) > 0:
+      myPos = successor.getAgentState(self.index).getPosition()
+      minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
+      features['distanceToFood'] = minDistance
+    # compute distance to the nearest capsule
+    capsules = self.getCapsules(successor)
+    if len(capsules) > 0:
+      minDistance = min([self.getMazeDistance(myPos, capsule) for capsule in capsules])
+      features['distanceToCapsule'] = minDistance
+      features['pickupCapsule'] = -len(capsules)
+    else:
+      features['distanceToCapsule'] = 999999
+      # distance to the escape goals
+    features['distanceToEscape'] = min([self.getMazeDistance(myPos, home) for home in self.escapeGoals])
+    #distance to ally
+    if self.index == self.getTeam(gameState)[0]:
+      features['distanceToAlly'] = self.getDistanceToAlly(myPos, gameState)
+      # distance to the enemy
+    features['distanceToEnemy'] = self.getNearestGhost(myPos, gameState)[1]
+    # is it a dead corner? corner depth
+    #todo
+    # stop
+    if action == Directions.STOP:
+      features['stop'] = 1
+    else:
+      features['stop'] = 0
+    return features
+
+  def getDefendWeights(self, gameState, action):
+    """
+    Normally, weights do not depend on the gamestate.  They can be either
+    a counter or a dictionary.
+    """
+    return {'successorScore': 1000, 'distanceToFood': -100, 'distanceToCapsule': -10, 'distanceToEscape': -5,
+            'distanceToAlly': 100, 'distanceToEnemy': 200, 'stop': -5000, 'pickupCapsule': -5000}
 
 class OffensiveReflexAgent(GeneralAgent):
   """
