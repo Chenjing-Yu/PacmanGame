@@ -221,7 +221,7 @@ class BasicAgent(CaptureAgent):
         #如果new_belief的各项value和相加==0，什么时候会出现这种情况？？敌方死亡重生的时候。
         if new_belief.totalCount() == 0:
             self.initializeBeliefs(enemy)
-            print "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+            #print "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
             #print self.index,myPos
         else:
             # Normalize and set the new belief.
@@ -239,7 +239,7 @@ class BasicAgent(CaptureAgent):
         and elapsing time for the beliefs. We also show our beliefs on the
         screen by using the provided debugging function.
         """
-        t1=time.time()
+        #t1=time.time()
         myPos = gameState.getAgentPosition(self.index)
         #agent噪点距离list
         noisyDistances = gameState.getAgentDistances()
@@ -281,7 +281,7 @@ class BasicAgent(CaptureAgent):
         action = self.maxFunction(newState)
         t=time.time()
         #print t1-self.lastTime
-        print "action runtime=",t-t1
+        #print "action runtime=",t-t1
         #self.lastTime=t
 
         return action
