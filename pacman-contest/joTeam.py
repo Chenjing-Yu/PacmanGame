@@ -82,25 +82,101 @@ class GeneralAgent(CaptureAgent):
     self.mapWidth = gameState.getWalls().width
     self.mapHeight = gameState.getWalls().height
     self.mapSize = self.mapWidth*self.mapHeight
+    #agent的偏好，偏好行动范围
     self.favoredY = 0
-    #index of ally
+    #index of ally 队友的index
     self.ally = self.index
     for i in self.getTeam(gameState):
       if self.index != i:
         self.ally = i
     #indexes of enemies
     self.enemies = self.getOpponents(gameState)
-    #positions that are not walls on the other side
+    #positions that are not walls on the other side敌方地盘的合法位置
     self.enemyPos = []
-    #positions that are not walls on our side
+    #positions that are not walls on our side我方地盘的合法位置
     self.ourPos = []
     #escape goals -- the entrance positions on our side
     self.escapeGoals = []
     #corner depth: a map of position index and depth value, deeper corners have higher depths, 0 by default
     self.cornerDepth = util.Counter()
+    self.beliefs={}
+    #整张地图的可行动位置
+    self.legalPositions = gameState.getWalls().asList(False)
+    #地图中线的横坐标
+    self.midWidth = gameState.data.layout.width / 2
 
     """initiate variables"""
     self.init(gameState)
+    self.startBelief(gameState)
+
+  def startBelief(self,gameState):
+    '''游戏开始，初始化belief字典'''
+    for enemy in self.enemies:
+        self.beliefs[enemy] = util.Counter()
+        self.beliefs[enemy][gameState.getInitialAgentPosition(enemy)] = 1.0
+
+  def predictProbabilityOfPositionAfterAction(self,enemyIndex,gameState):
+    new_belief = util.Counter()
+    for p in self.legalPositions:
+      # Get the new probability distribution.
+      newPossitionPossibility = util.Counter()
+      possiblePositions=[(p[0]+1,p[1]),(p[0]-1,p[1]),(p[0],p[1]),(p[0],p[1]+1),(p[0],p[1]-1)]
+      for position in possiblePositions:
+          if position in self.legalPositions:
+              newPossitionPossibility[position] = 1.0
+      newPossitionPossibility.normalize()
+      for newPos, prob in newPossitionPossibility.items():
+        new_belief[newPos] += prob * self.beliefs[enemyIndex][p]
+    new_belief.normalize()
+    self.beliefs[enemyIndex] = new_belief
+
+  def computeProbabilityDistribution(self,enemyIndex,gameState):
+    noisyDistance=gameState.getAgentDistances()[enemyIndex]
+    myPos = gameState.getAgentPosition(self.index)
+    new_belief = util.Counter()
+    for p in self.legalPositions:
+      trueManhattanDistance = util.manhattanDistance(myPos, p)
+      confidence = gameState.getDistanceProb(trueManhattanDistance, noisyDistance)
+      #排除不可能的概率
+      if self.red:
+        pac = p[0] < self.midWidth
+      else:
+        pac = p[0] > self.midWidth
+      #1，对方不可能在范围5之内，因为他如果在，我就已经得到它得精确距离了。
+      if trueManhattanDistance <= 5:
+        new_belief[p] = 0.
+      #2，通过敌方agent的身份，判断其不可能在地图左/右侧
+      elif pac != gameState.getAgentState(enemyIndex).isPacman:
+        new_belief[p] = 0.
+      else:
+        new_belief[p] = self.beliefs[enemyIndex][p] * confidence
+    if new_belief.totalCount() == 0:
+      self.beliefs[enemyIndex] = util.Counter()
+      for p in self.legalPositions:
+        self.beliefs[enemyIndex][p] = 1.0
+      self.beliefs[enemyIndex].normalize()
+    else:
+      new_belief.normalize()
+      self.beliefs[enemyIndex] = new_belief
+
+  def getMostLikelyPosition(self,enemyIndex,gameState):
+    self.predictProbabilityOfPositionAfterAction(enemyIndex,gameState)
+    self.computeProbabilityDistribution(enemyIndex,gameState)
+    print "the most likely position of enemy=",enemyIndex,"is",self.beliefs[enemyIndex].argMax()
+    return self.beliefs[enemyIndex].argMax()
+
+  def getMostLikelyManhattanDistance(self,enemyIndex,gameState):
+    enemyPos=self.getMostLikelyPosition(enemyIndex,gameState)
+    myPos = gameState.getAgentPosition(self.index)
+    return util.manhattanDistance(myPos, enemyPos)
+
+  def getMostLikelyMazeDistance(self,enemyIndex,gameState):
+    enemyPos=self.getMostLikelyPosition(enemyIndex,gameState)
+    myPos = gameState.getAgentPosition(self.index)
+    print "myIndex=",self.index
+    print "maze distance to enemy=",enemyIndex,"is",self.getMazeDistance(enemyPos,myPos)
+    return self.getMazeDistance(enemyPos,myPos)
+
 
   def init(self, gameState):
     #escape goals
@@ -190,8 +266,8 @@ class GeneralAgent(CaptureAgent):
       pos = gameState.getAgentPosition(i)
       if pos != None:
         positions.append((i, pos))
-      #else:
-        #todo: belief most likely position
+      else:
+        self.getMostLikelyPosition(i,gameState)
     return positions
 
   def getEnemyDistances(self, myPos, gameState):
@@ -202,7 +278,8 @@ class GeneralAgent(CaptureAgent):
     for i in self.enemies:
       pos = gameState.getAgentPosition(i)
       if pos == None:
-        dists.append((i, gameState.getAgentDistances()[i]))#todo: belief most likely distance
+        #dists.append((i, gameState.getAgentDistances()[i]))#todo: belief most likely distance
+        dists.append((i, self.getMostLikelyMazeDistance(i,gameState)))
       else:
         dists.append((i, self.getMazeDistance(myPos, pos)))
     return dists

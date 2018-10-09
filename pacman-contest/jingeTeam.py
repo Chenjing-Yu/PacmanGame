@@ -70,7 +70,7 @@ class rootAgent(CaptureAgent):
     CaptureAgent.registerInitialState in captureAgents.py.
     '''
     CaptureAgent.registerInitialState(self, gameState)
-
+    #print "ddd"
     '''
     Your initialization code goes here, if you need any.
     '''
@@ -140,8 +140,9 @@ class attackAgent(rootAgent):
     '''
     Your initialization code goes here, if you need any.
     '''
-
+    
     foodList=self.getFood(gameState).asList()
+    """给地图上的food分区"""
     #循环得到foodRegion，列表嵌套列表再嵌套元组，每一个基本元素是一个food坐标元组
     while(len(foodList)!=0):
       food=foodList[0]
@@ -161,6 +162,7 @@ class attackAgent(rootAgent):
       if food2[1]==food1[1] and (food2[0]==food1[0]+1 or food2[0]==food1[0]-1):
         region+=self.findNeighbourFood(food2,foodList)
     return region
+    """结束分区"""
 
   def getFeatures(self, gameState, action):
     features = util.Counter()
