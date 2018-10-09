@@ -263,51 +263,88 @@ class GeneralAgent(CaptureAgent):
     foodLeft = len(self.getFood(gameState).asList())
     carryLimit = 5
     #enemy
-    enemyScaredTimer = min([gameState.getAgentState(enemy).scaredTimer for enemy in self.enemies])
+    #enemyScaredTimer = min([gameState.getAgentState(enemy).scaredTimer for enemy in self.enemies])
     enemyPositions = self.getEnemyDistances(myPos, gameState)
     minDistance = 999999
+    enemyScaredTimer = 0
     for i, dist in enemyPositions:
       minDistance = min(minDistance, dist)
+      enemyScaredTimer = gameState.getAgentState(i).scaredTimer
 
     mode = 'attack'
     #only 2 food left, just go back home
     if foodLeft <= 2:
       mode = 'escape'
+      print("111")
     #enemy is in 5 steps
     if minDistance <= 5:
       #as a pacman, may escape depending on whether enemy is scared
       if isPacman:
         if enemyScaredTimer <= 5:
           mode = 'escape'
+          print("222")
       #as a ghost, defend only if not so scared
       elif scaredTimer == 0:
         mode = 'defend'
+        print("333")
       elif scaredTimer <= 5:
-        mode = 'defend'#todo: follow?
+        mode = 'defend'#todo: follow
+        print("444")
     #enemy not visible
     elif carrying > carryLimit and enemyScaredTimer < 5:
       mode = 'escape'#todo: not just escape, but going towards middle, still eating food
+      print("555")
 
-#todo: escape mode, use A* to find the path, and take the first action
-    values = [self.evaluate(gameState, a, mode) for a in actions]
+    print(mode)
 
-    maxValue = max(values)
-    bestActions = [a for a, v in zip(actions, values) if v == maxValue]
+    # escape mode, use A* to find the path, and take the first action
+    if(mode == 'escape'):
+      return self.escapeAction(gameState)
+    else:
+      values = [self.evaluate(gameState, a, mode) for a in actions]
+      maxValue = max(values)
+      bestActions = [a for a, v in zip(actions, values) if v == maxValue]
 
-    if foodLeft <= 2:
-      bestDist = 9999
-      for action in actions:
-        successor = self.getSuccessor(gameState, action)
-        pos2 = successor.getAgentPosition(self.index)
-        dist = self.getMazeDistance(self.start,pos2)
-        if dist < bestDist:
-          bestAction = action
-          bestDist = dist
-      return bestAction
+    # if foodLeft <= 2:
+    #   bestDist = 9999
+    #   for action in actions:
+    #     successor = self.getSuccessor(gameState, action)
+    #     pos2 = successor.getAgentPosition(self.index)
+    #     dist = self.getMazeDistance(self.start,pos2)
+    #     if dist < bestDist:
+    #       bestAction = action
+    #       bestDist = dist
+    #   return bestAction
+      #最终随机返回一个最优action
+      return random.choice(bestActions)
 
+  def escapeAction(self, gameState):
+    open = util.PriorityQueue()
+    closed = set()
+    actions = []
+    cost = len(actions) + self.heuristic(gameState)
+    open.push((gameState, actions), cost)
 
-    #最终随机返回一个最优action
-    return random.choice(bestActions)
+    while open:
+      current, actions = open.pop()
+      mypos = current.getAgentPosition(self.index)
+      if mypos in self.escapeGoals:
+        break
+      if current not in closed:
+        closed.add(current)
+        nextActions = current.getLegalActions(self.index)
+        for next in nextActions:
+          successor = self.getSuccessor(current, next)
+          nextActions = actions + [next]
+          nextCost = cost + self.heuristic(successor)
+          if successor not in closed:
+            open.push((successor, nextActions), nextCost)
+    return actions[0]
+
+  def heuristic(self, gameState):
+    mypos = gameState.getAgentPosition(self.index)
+    enemy, distance = self.getNearestGhost(mypos, gameState)
+    return 1.0/(distance+0.1)
 
   def getSuccessor(self, gameState, action):
     """
@@ -370,7 +407,10 @@ class GeneralAgent(CaptureAgent):
       # distance to the enemy
     features['distanceToEnemy'] = self.getNearestGhost(myPos, gameState)[1]
     # is it a dead corner? corner depth
-      #todo
+    if(len(gameState.getLegalActions(self.index)) <= 2):
+      features['deadCorner'] = 1
+    else:
+      features['deadCorner'] = 0
     # stop
     if action == Directions.STOP:
       features['stop'] = 1
@@ -383,7 +423,7 @@ class GeneralAgent(CaptureAgent):
     a counter or a dictionary.
     """
     return {'successorScore': 1000, 'distanceToFood': -100, 'distanceToCapsule': -100, 'distanceToEscape': 0,
-            'distanceToAlly': -100, 'distanceToEnemy': 500, 'stop': -1000, 'pickupCapsule': 1000}
+            'distanceToAlly': 100, 'distanceToEnemy': 500, 'stop': -1000, 'pickupCapsule': 1000, 'deadCorner': -100}
 
   def getDefendFeatures(self, gameState, action):
     features = util.Counter()
@@ -419,12 +459,6 @@ class GeneralAgent(CaptureAgent):
     #gameState.getAgentState(self.index)返回：Ghost: (x,y)=(30.0, 12.0), South
     #rev就返回上一行，最后那个方向的反方向。North
     rev = Directions.REVERSE[gameState.getAgentState(self.index).configuration.direction]
-    #print "self.index",self.index
-    #print "gameState\n",gameState
-    #print "gameState.getAgentState(self.index)\n",gameState.getAgentState(self.index)
-    #print "rev\n",rev
-
-    #如果我当前选择的action是我运动的反方向
     if action == rev: features['reverse'] = 1
 
     return features
