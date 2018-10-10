@@ -229,6 +229,11 @@ class InferenceAgent(CaptureAgent):
             new_belief.normalize()
             #更新belief字典
             self.beliefs[enemy] = new_belief
+        if(self.index==1):
+          if(enemy==0):
+            self.debugDraw(self.beliefs[enemy].argMax(), [1,0,0], True)
+          else:
+           self.debugDraw(self.beliefs[enemy].argMax(), [1,0.5,0], False)
 
 
     def chooseAction(self, gameState):
