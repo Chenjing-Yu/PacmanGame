@@ -453,7 +453,7 @@ class GeneralAgent(CaptureAgent):
     elif carrying > carryLimit and enemyScaredTimer < 5:
       mode = 'retreat'
 
-    #print "index=",self.index,"mode=",mode
+    print "index=",self.index,"mode=",mode
 
     if mode == "escape" or mode == "retreat":
       return self.astar(gameState, myPos, mode)
@@ -461,9 +461,7 @@ class GeneralAgent(CaptureAgent):
     maxValue = max(values)
     bestActions = [a for a, v in zip(actions, values) if v == maxValue]
 
-    ti=time.time()-t
-    if (ti>=1):
-      print "chooseAction() time", time.time()-t
+    print "chooseAction() time", time.time()-t
     #更新旧的食物列表
     currentFoodList = self.getFoodYouAreDefending(gameState).asList()
     self.lastTurnFoodList=list(currentFoodList)
