@@ -475,7 +475,7 @@ class GeneralAgent(CaptureAgent):
     #enemy not visible
     #如果我身上携带的豆足够多，且对方的“害怕状态”马上结束
     elif carrying > carryLimit and enemyScaredTimer < 5:
-      mode = 'retreat'
+      mode = 'escape'#'retreat'
 
     #print "index=",self.index,"mode=",mode
 
