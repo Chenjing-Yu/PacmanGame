@@ -105,6 +105,7 @@ class GeneralAgent(CaptureAgent):
     #地图中线的横坐标
     self.midWidth = gameState.data.layout.width / 2
     self.lastTurnFoodList=self.getFoodYouAreDefending(gameState).asList()
+    self.allyMode="attack"
 
     """initiate variables"""
     self.init(gameState)
@@ -421,15 +422,14 @@ class GeneralAgent(CaptureAgent):
     #那么当我方回到家放豆的时候，就要转换成defend模式。
     #self.allyIsPacman(gameState) and
     #现在如果有敌人进攻，两个人都会防守，需要改进。Jinge Todo：
+
+    #如果遭到攻击，并且我在自己地盘是“怪物”，并且队友的模式不是防御，那么我要防御。
     if (not isPacman and  myScaredTimer == 0 and self.enemyAttacking(gameState)):
       mode="defend"
     #如果敌人进攻，那么吃豆多的agent优先逃跑
     if (self.enemyAttacking(gameState) and 
         gameState.getAgentState(self.index).numCarrying>gameState.getAgentState(self.ally).numCarrying):
       mode="escape"
-
-
-
 
     #only 2 food left, just go back home
     if foodLeft <= 2:
@@ -463,6 +463,8 @@ class GeneralAgent(CaptureAgent):
     #更新旧的食物列表
     currentFoodList = self.getFoodYouAreDefending(gameState).asList()
     self.lastTurnFoodList=list(currentFoodList)
+    #更新队友的mode
+    self.allyMode=mode
     return random.choice(bestActions)
 
 
