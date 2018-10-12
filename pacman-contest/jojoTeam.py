@@ -336,7 +336,7 @@ class GeneralAgent(CaptureAgent):
         new_belief[pos] = 1.0
         self.beliefs[i] = new_belief
       else:
-        pos=self.getMostLikelyPosition(i, gameState)
+        pos = self.getMostLikelyPosition(i, gameState)
       info.append((i, pos, gameState.getAgentState(i).isPacman, gameState.getAgentState(i).scaredTimer))
     # if(self.index==1):
     #   if(i==0):
@@ -430,13 +430,13 @@ class GeneralAgent(CaptureAgent):
     enemyAttacking = False #true if there's an enemy which is pacman
     minDistance = 999999 #distance to the nearest enemy (not only ghost)
     enemyScaredTimer = 0 #nereast enemy's scared timer
-    for i, pos, isPacman, scaredTimer in self.enemyInfo:
+    for eIndex, ePos, ePacman, eScaredTimer in self.enemyInfo:
       #get minimum distance to enemy and the enemy's scaredTimer
-      dist = self.getMazeDistance(myPos, pos)
+      dist = self.getMazeDistance(myPos, ePos)
       if dist < minDistance:
         minDistance = dist
-        enemyScaredTimer = scaredTimer
-      if isPacman:
+        enemyScaredTimer = eScaredTimer
+      if ePacman:
         enemyAttacking = True
     # for i, dist in enemyDistances:
     #   minDistance = min(minDistance, dist)
@@ -456,7 +456,7 @@ class GeneralAgent(CaptureAgent):
       mode="defend"
     #如果敌人进攻，那么吃豆多的agent优先逃跑
     if (enemyAttacking and carrying > gameState.getAgentState(self.ally).numCarrying):
-      mode="escape"
+      mode="retreat"
 
     #enemy is in 5 steps
     if minDistance <= 5:
@@ -475,12 +475,12 @@ class GeneralAgent(CaptureAgent):
     #enemy not visible
     #如果我身上携带的豆足够多，且对方的“害怕状态”马上结束
     elif carrying > carryLimit and enemyScaredTimer < 5:
-      mode = 'escape'#'retreat'
+      mode = 'retreat'#'retreat'
 
     #print "index=",self.index,"mode=",mode
 
     """A star for escape and retreat"""
-    if mode == "escape" or mode == "retreat":
+    if mode == "escape":
       return self.astar(gameState, myPos, mode)
 
     """Q values for attack and defend"""
@@ -585,7 +585,7 @@ class GeneralAgent(CaptureAgent):
     if mode == "attack":
       features = self.getAttackFeatures(gameState, action)
       weights = self.getAttackWeights(gameState, action)
-    elif mode == "escape":
+    elif mode == "retreat":
       features = self.getEscapeFeatures(gameState, action)
       weights = self.getEscapeWeights(gameState, action)
       #print "features * weights",features * weights
