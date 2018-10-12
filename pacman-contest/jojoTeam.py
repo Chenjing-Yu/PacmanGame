@@ -465,8 +465,6 @@ class GeneralAgent(CaptureAgent):
       if isPacman:
         if enemyScaredTimer < 5:
           mode = 'escape'
-        elif enemyScaredTimer <= 7:
-          mode = 'retreat'
       #as a ghost, defend only if not so scared
       #如果我是怪物，并且没有进入“害怕状态”
       elif myScaredTimer == 0:
