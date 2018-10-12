@@ -457,6 +457,9 @@ class GeneralAgent(CaptureAgent):
     #如果敌人进攻，那么吃豆多的agent优先逃跑
     if (enemyAttacking and carrying > gameState.getAgentState(self.ally).numCarrying):
       mode="retreat"
+    elif(carrying == gameState.getAgentState(self.ally).numCarrying):
+        if (self.index > self.ally):
+          mode = "retreat"
 
     #enemy is in 5 steps
     if minDistance <= 5:
@@ -585,13 +588,16 @@ class GeneralAgent(CaptureAgent):
     if mode == "attack":
       features = self.getAttackFeatures(gameState, action)
       weights = self.getAttackWeights(gameState, action)
-    elif mode == "retreat":
-      features = self.getEscapeFeatures(gameState, action)
-      weights = self.getEscapeWeights(gameState, action)
+    elif mode == "goHome":
+      features = self.getGoHomeFeatures(gameState, action)
+      weights = self.getGoHomeWeights(gameState, action)
       #print "features * weights",features * weights
     elif mode == "defend":
       features = self.getDefendFeatures(gameState, action)
       weights = self.getDefendWeights(gameState, action)
+    elif mode == "retreat":
+      features = self.getEscapeFeatures(gameState, action)
+      weights = self.getEscapeWeights(gameState, action)
       
     # print(features)
     # print(weights)
@@ -644,7 +650,7 @@ class GeneralAgent(CaptureAgent):
     return features
 
   def getAttackWeights(self, gameState, action):
-    return {'successorScore': 2000, 'distanceToFood': -100, 'distanceToCapsule': -20, 'distanceToEscape': 5,
+    return {'successorScore': 20000, 'distanceToFood': -100, 'distanceToCapsule': -20, 'distanceToEscape': 5,
             'distanceToAlly': 50, 'distanceToEnemy': -5, 'stop': -1000, 'pickupCapsule': 1000, 'deadCorner': -10}
 
   def getDefendFeatures(self, gameState, action):
@@ -695,6 +701,46 @@ class GeneralAgent(CaptureAgent):
     """
     return {'numInvaders': -99999999, 'onDefense': 100, 'invaderDistance': -100, 'stop': -200, 'reverse': -2}
 
+  def getGoHomeFeatures(self, gameState, action):
+    features = util.Counter()
+    successor = self.getSuccessor(gameState, action)
+    myState = successor.getAgentState(self.index)
+    myPos = myState.getPosition()
+
+
+    ## Computes whether we're safe
+    features['isSafe'] = 1
+    if myState.isPacman: features['isSafe'] = 0
+
+
+    successor = self.getSuccessor(gameState, action)
+    #行动后，自身下一回合的位置
+    myState = successor.getAgentState(self.index)
+    myPos = myState.getPosition()
+    #自身到达中线的最近距离
+    distanceFromStart = min([self.distancer.getDistance(myPos, (self.midWidth, i))
+                              for i in range(gameState.data.layout.height)
+                              if (self.midWidth, i) in self.legalPositions])
+    #我与最近的“敌方ghost”的距离
+    enemyIndex,minDis=self.getNearestGhost(myPos,successor)
+    #print enemyIndex,minDis
+    if(gameState.getAgentState(enemyIndex).scaredTimer>0):
+      features["mindDis"]=0
+      features["critical"]=0
+    else:
+      features["mindDis"]=minDis
+      features['distanceFromStart']=distanceFromStart
+      if minDis>2:
+        features["critical"]=0
+      else:
+        features["critical"]=1
+      
+
+    return features
+
+  def getGoHomeWeights(self, gameState, action):
+    return {'isSafe':999,'minDis': 1, 'distanceFromStart': -2,'critical':-999}
+
   def getEscapeFeatures(self, gameState, action):
     features = util.Counter()
     successor = self.getSuccessor(gameState, action)
@@ -723,22 +769,33 @@ class GeneralAgent(CaptureAgent):
     myState = successor.getAgentState(self.index)
     myPos = myState.getPosition()
     #自身到达中线的最近距离
-    distanceFromStart = min([self.distancer.getDistance(myPos, (self.midWidth, i))
+    distanceFromStart = min([self.getMazeDistance(myPos, (self.midWidth, i))
                               for i in range(gameState.data.layout.height)
                               if (self.midWidth, i) in self.legalPositions])
+    #如果“药丸”>0
+    if len(self.getCapsules(gameState))>0:
+      distanceFromCapsuls=min([self.getMazeDistance(myPos, p) for p in self.getCapsules(gameState)])
+    #如果离“变身药丸”距离近，就去吃它。
+      distanceFromStart=min(distanceFromStart,distanceFromCapsuls)
     #我与最近的“敌方ghost”的距离
-    minDis=self.getNearestGhost(myPos,successor)[1]
-    if minDis>2:
+    enemyIndex,minDis=self.getNearestGhost(myPos,successor)
+    if(gameState.getAgentState(enemyIndex).scaredTimer>0):
+      features["mindDis"]=0
+      features["critical"]=0
+    else:
       features["mindDis"]=minDis
       features['distanceFromStart']=distanceFromStart
-    else:
-      features["mindDis"]=minDis*100
-      features['distanceFromStart']=distanceFromStart
-
+      if minDis>2:
+        features["critical"]=0
+      else:
+        features["critical"]=1
+    #print "action",action
+    #print features
     return features
 
   def getEscapeWeights(self, gameState, action):
-    return {'isSafe':999,'minDis': 1, 'distanceFromStart': -2}
+    return {'isSafe':999,'minDis': 1, 'distanceFromStart': -2,'critical':-999}
+
 
 class TopAgent(GeneralAgent):
 
