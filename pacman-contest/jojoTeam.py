@@ -463,10 +463,10 @@ class GeneralAgent(CaptureAgent):
       #as a pacman, may escape depending on whether enemy is scared
       #如果我是pacman，那么开始逃跑
       if isPacman:
-        if enemyScaredTimer <= 7:
-          mode = 'retreat'
         if enemyScaredTimer < 5:
           mode = 'escape'
+        elif enemyScaredTimer <= 7:
+          mode = 'retreat'
       #as a ghost, defend only if not so scared
       #如果我是怪物，并且没有进入“害怕状态”
       elif myScaredTimer == 0:
@@ -557,7 +557,7 @@ class GeneralAgent(CaptureAgent):
 
     #print "heuristic() time",time.time()-t1
     if mode == 'escape': # directly home
-      return goalDist + 1.0/(enemyDist*2+0.1)
+      return goalDist + 5.0/(enemyDist+0.1)
     else: # retreat: going back (escape goals or capsule) tending to eat food along the way
       capsules = self.getCapsules(gameState)
       if len(capsules) > 0:
@@ -565,7 +565,7 @@ class GeneralAgent(CaptureAgent):
       pickupfood = 0
       if mypos in self.foodList:
         pickupfood = 1
-      return goalDist + 1.0/(enemyDist*2+0.1) + 1.0/(pickupfood+1.0)
+      return goalDist + 5.0/(enemyDist+0.1) + 1.0/(pickupfood+1.0)
 
 
   def getSuccessor(self, gameState, action):
