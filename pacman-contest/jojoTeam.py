@@ -606,7 +606,7 @@ class GeneralAgent(CaptureAgent):
 
     #print "heuristic() time",time.time()-t1
     if mode == 'goHome': # directly home
-      return goalDist + 5.0/(enemyDist+0.1)
+      return goalDist + 10.0/(enemyDist*2+0.1)
     else: # retreat: going back (escape goals or capsule) tending to eat food along the way
       capsules = self.getCapsules(gameState)
       if len(capsules) > 0:
@@ -614,7 +614,7 @@ class GeneralAgent(CaptureAgent):
       # pickupfood = 0
       # if mypos in self.foodList:
       #   pickupfood = 1
-      return goalDist + 5.0/(enemyDist+0.1) #+ 1.0/(pickupfood+1.0)
+      return goalDist + 10.0/(enemyDist*2+0.1) #+ 1.0/(pickupfood+1.0)
 
 
   def getSuccessor(self, gameState, action):
@@ -698,7 +698,7 @@ class GeneralAgent(CaptureAgent):
     return features
 
   def getAttackWeights(self, gameState, action):
-    return {'successorScore': 20000, 'distanceToFood': -100, 'distanceToCapsule': -20, 'distanceToEscape': 5,
+    return {'successorScore': 30000, 'distanceToFood': -100, 'distanceToCapsule': -20, 'distanceToEscape': 5,
             'distanceToAlly': 50, 'distanceToEnemy': -5, 'stop': -1000, 'pickupCapsule': 1000, 'deadCorner': -10}
 
   def getDefendFeatures(self, gameState, action):
