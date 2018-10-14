@@ -301,9 +301,9 @@ class GeneralAgent(CaptureAgent):
 
       if self.index==1:
         if i==0 :
-          self.debugDraw(pos, [1,0,0], True)
+          self.debugDraw(pos, [0.8,0,0], True)
         else:
-          self.debugDraw(pos, [1,0.5,0], False)
+          self.debugDraw(pos, [0,0.8,0.8], False)
 
     return positions
 
@@ -339,11 +339,11 @@ class GeneralAgent(CaptureAgent):
       else:
         pos = self.getMostLikelyPosition(i, gameState)
       info.append((i, pos, gameState.getAgentState(i).isPacman, gameState.getAgentState(i).scaredTimer))
-    # if(self.index==1):
-    #   if(i==0):
-    #     self.debugDraw(pos, [1,0,0], True)
-    #   else:
-    #     self.debugDraw(pos, [1,0.5,0], False)
+      if self.index==1:
+        if i==0 :
+          self.debugDraw(pos, [1,0,0], True)
+        else:
+          self.debugDraw(pos, [1,0.5,0], False)
     self.enemyInfo = info
 
   def getNearestGhost(self, myPos, gameState):
@@ -496,7 +496,7 @@ class GeneralAgent(CaptureAgent):
             #print "@@@@@@@@@@@@@@@@@@@@@@@@i choose attack by bravery@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
             return 'attack'
           else:
-            mode = 'escape'
+            mode = 'retreat'
       #as a ghost, defend only if not so scared
       #如果我是怪物，并且没有进入“害怕状态”
       elif myScaredTimer == 0:
@@ -610,7 +610,6 @@ class GeneralAgent(CaptureAgent):
     return successors
 
   def heuristic(self, gameState, mypos, mode):
-    t1=time.time()
     goalDist = min([self.getMazeDistance(mypos, p) for p in self.escapeGoals]) # min distance to escape goals
     enemyDist = 999999 # min distance to the nearest ghost
     for enemy, pos, isPacman, scaredTimer in self.enemyInfo:
@@ -630,10 +629,9 @@ class GeneralAgent(CaptureAgent):
       return goalDist + 10.0/(enemyDist*2+0.1) #+ 1.0/(pickupfood+1.0)
 
   def printPath(self, path):
-    if self.index==1:
-      for p in path:
-        print p
-        self.debugDraw(p, [1.0,0,1.0], False)
+    self.debugClear()
+    for p in path:
+      self.debugDraw(p, [0.4,0.4,0.4], False)
 
   def getSuccessor(self, gameState, action):
     """
