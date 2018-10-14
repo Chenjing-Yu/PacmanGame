@@ -299,8 +299,8 @@ class GeneralAgent(CaptureAgent):
         pos=self.getMostLikelyPosition(i,gameState)
         positions.append((i,pos))
 
-      if(self.index==1):
-        if(i==0):
+      if self.index==1:
+        if i==0 :
           self.debugDraw(pos, [1,0,0], True)
         else:
           self.debugDraw(pos, [1,0.5,0], False)
@@ -550,6 +550,9 @@ class GeneralAgent(CaptureAgent):
     open = util.PriorityQueue()
     closed = set()
     paths = {myPos: [], }
+    #for debug
+    debugRoute = {myPos: [], }
+    #for debug end
     open.push(myPos, 0)
     escapePath = []
     while open:
@@ -558,6 +561,9 @@ class GeneralAgent(CaptureAgent):
       cost = len(actions)
       if pos in self.escapeGoals:
         escapePath = paths[pos]
+        #for debug
+        debugPositions = debugRoute[pos]
+        #for debug end
         break
       if pos not in closed:
         closed.add(pos)
@@ -570,9 +576,15 @@ class GeneralAgent(CaptureAgent):
               if nextCost < len(paths[nextpos]) + self.heuristic(gameState, nextpos, mode):
                 open.update(nextpos, nextCost)
                 paths[nextpos] = nextActions
+                #for debug
+                debugRoute[nextpos] = debugRoute[pos] + [nextpos]
+                #for debug end
             else:
               open.push(nextpos, nextCost)
               paths[nextpos] = nextActions
+              #for debug
+              debugRoute[nextpos] = debugRoute[pos] + [nextpos]
+              #for debug end
 
     #print "escapeAction() time",time.time()-t1
     if len(escapePath) == 0:
@@ -580,6 +592,7 @@ class GeneralAgent(CaptureAgent):
       return Directions.STOP
     else:
       #print escapePath
+      self.printPath(debugPositions)
       return escapePath[0]
 
   def legalSuccessors(self, pos):
@@ -616,6 +629,11 @@ class GeneralAgent(CaptureAgent):
       #   pickupfood = 1
       return goalDist + 10.0/(enemyDist*2+0.1) #+ 1.0/(pickupfood+1.0)
 
+  def printPath(self, path):
+    if self.index==1:
+      for p in path:
+        print p
+        self.debugDraw(p, [1.0,0,1.0], False)
 
   def getSuccessor(self, gameState, action):
     """

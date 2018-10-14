@@ -107,6 +107,7 @@ class GeneralAgent(CaptureAgent):
     self.lastTurnFoodList=self.getFoodYouAreDefending(gameState).asList()
     #a list of enemy's (index, pos, isPacman, scaredTimer), fetched in each chooseAction
     self.enemyInfo = []
+    self.Timer = 300
 
     """initiate variables"""
     self.init(gameState)
@@ -298,11 +299,11 @@ class GeneralAgent(CaptureAgent):
         pos=self.getMostLikelyPosition(i,gameState)
         positions.append((i,pos))
 
-      if(self.index==1):
-        if(i==0):
-          self.debugDraw(pos, [1,0,0], True)
-        else:
-          self.debugDraw(pos, [1,0.5,0], False)
+      # if self.index==1:
+      #   if i==0 :
+      #     self.debugDraw(pos, [1,0,0], True)
+      #   else:
+      #     self.debugDraw(pos, [1,0.5,0], False)
 
     return positions
 
@@ -404,30 +405,27 @@ class GeneralAgent(CaptureAgent):
   def getFavoredFoodDistance(self, myPos, food):
     return self.getMazeDistance(myPos, food) + abs(self.favoredY - food[1])
 
-  def chooseAction(self, gameState):
-    """
-    Picks among the actions with the highest Q(s,a).
-    选择Q（s,a）值最高的actions.
-    """
-    t=time.time()
-    actions = gameState.getLegalActions(self.index)
+  def chooseMode(self,gameState, myPos):
     #  print "********my current position=",gameState.getAgentPosition(3)
     # start = time.time()
     """food list"""
     self.foodList = self.getFood(gameState).asList() #food (positions) left to eat
     foodLeft = len(self.foodList)
+    if foodLeft>0:
+      nearestFoodDistance=min([self.getMazeDistance(myPos, food)for food in self.foodList])
+    else:
+      nearestFoodDistance=9999
     carryLimit = 5 #limit of food to carry, retreat when carrying more food
     #score = self.getScore(gameState) #current score
 
     #查看预测的位置对不对
     """this agent"""
-    myPos = gameState.getAgentPosition(self.index)
     isPacman = gameState.getAgentState(self.index).isPacman #is pacman or ghost
     myScaredTimer = gameState.getAgentState(self.index).scaredTimer #left time of scared status (0 if not scared)
     carrying = gameState.getAgentState(self.index).numCarrying #number of food this agent is carrying
     """enemy information"""
-    self.getEnemyInfo(gameState) # refresh enemyInfo, DO NOT DELETE
     enemyAttacking = False #true if there's an enemy which is pacman
+    #到任意状态敌人的最小距离
     minDistance = 999999 #distance to the nearest enemy (not only ghost)
     enemyScaredTimer = 0 #nereast enemy's scared timer
     for eIndex, ePos, ePacman, eScaredTimer in self.enemyInfo:
@@ -438,52 +436,102 @@ class GeneralAgent(CaptureAgent):
         enemyScaredTimer = eScaredTimer
       if ePacman:
         enemyAttacking = True
-    # for i, dist in enemyDistances:
-    #   minDistance = min(minDistance, dist)
-    #   enemyScaredTimer = gameState.getAgentState(i).scaredTimer
 
     #设置吃豆人的状态，默认状态为attack
     mode = 'attack'
-    #only 2 food left, just go back home
-    if foodLeft <= 2:
-      mode = 'escape'
-
     #如果我方地盘有敌方吃豆人存在，且，当前我方没有“ghost”去拦截他，
     #那么当我方回到家放豆的时候，就要转换成defend模式。
     #self.allyIsPacman(gameState) and
     #现在如果有敌人进攻，两个人都会防守，需要改进。Jinge Todo：
-    if (not isPacman and  myScaredTimer == 0 and enemyAttacking) :
-      mode="defend"
-    #如果敌人进攻，那么吃豆多的agent优先逃跑
-    if (enemyAttacking and carrying > gameState.getAgentState(self.ally).numCarrying):
-      mode="retreat"
-    elif(carrying == gameState.getAgentState(self.ally).numCarrying):
-      if (self.index > self.ally):
-        mode = "retreat"
 
-    #enemy is in 5 steps
+    #如果遭到攻击，并且我在自己地盘是“怪物”，并且队友的模式不是防御，那么我要防御。
+    #if (not isPacman and  myScaredTimer == 0 and self.enemyAttacking(gameState)):
+    #  mode="defend"
+    ##如果敌人进攻，那么吃豆多的agent优先逃跑
+    #if (self.enemyAttacking(gameState) and
+    #    gameState.getAgentState(self.index).numCarrying>gameState.getAgentState(self.ally).numCarrying):
+    #  mode="escape"
+
+    #只剩下两个豆直接回家
+    if foodLeft <= 2:
+      return 'goHome'
+
+    if self.Timer <= min([self.getMazeDistance(myPos, p) for p in self.escapeGoals]) + 5 and carrying > 0:
+      return 'goHome'
+
+    #如果敌人进攻
+    if(enemyAttacking):
+      #print "==================================attacking============================"
+      #如果我没处于“恐惧状态”
+      if(myScaredTimer==0):
+        #如果在自己的地盘
+        if(not isPacman):
+          return "defend"
+        #如果我在敌人的地盘
+        else:
+          #如果此时我的队友在我方地盘上,那么他会去防御
+          if(not self.allyIsPacman(gameState)):
+            pass
+          #如果我俩都在敌人地盘上
+          else:
+            #如果我比队友携带的豆多，我就回家
+            if(gameState.getAgentState(self.index).numCarrying>gameState.getAgentState(self.ally).numCarrying):
+              return 'goHome'#"goHome"
+            if(gameState.getAgentState(self.index).numCarrying==gameState.getAgentState(self.ally).numCarrying):
+              if (self.index>self.ally):
+                return 'goHome'#"goHome"
+      #恐惧状态下，我去吃豆
+      else:
+        #print "I am scared. So i decide to attack"
+        mode="attack"
+
+    #敌人出现在视野内
     if minDistance <= 5:
-      #as a pacman, may escape depending on whether enemy is scared
       #如果我是pacman，那么开始逃跑
       if isPacman:
-        if enemyScaredTimer < 5:
-          mode = 'escape'
+        if enemyScaredTimer <= 5:
+          if self.getNearestGhost(myPos,gameState)[1]>nearestFoodDistance+1:
+            #print "nearestGhost=",self.getNearestGhost(myPos,gameState)[1]
+            #print "nearestFoodDistance=",nearestFoodDistance
+            #print "@@@@@@@@@@@@@@@@@@@@@@@@i choose attack by bravery@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+            return 'attack'
+          else:
+            mode = 'escape'
       #as a ghost, defend only if not so scared
       #如果我是怪物，并且没有进入“害怕状态”
       elif myScaredTimer == 0:
         mode = 'defend'
       #这里有问题---------------------------------------------------------
-      elif myScaredTimer <= 5:
+      elif myScaredTimer < 5:
         mode = 'defend'#todo: follow?
-    #enemy not visible
+
+
+    #如果敌人不在视野内
     #如果我身上携带的豆足够多，且对方的“害怕状态”马上结束
     elif carrying > carryLimit and enemyScaredTimer < 5:
-      mode = 'retreat'#'retreat'
+      #如果敌方ghost距离我的距离大于我距离豆的距离，那么继续吃豆
+      if self.getNearestGhost(myPos,gameState)[1]>nearestFoodDistance+1:
+        #print "@@@@@@@@@@@@@@@@@@@@@@@@i have overload@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
+        return 'attack'
+      else:
+        mode = 'retreat'#"goHome"#todo: not just escape, but going towards middle, still eating food
+    return mode
+
+  def chooseAction(self, gameState):
+    """
+    Picks among the actions with the highest Q(s,a).
+    选择Q（s,a）值最高的actions.
+    """
+    self.Timer = self.Timer - 1
+    self.getEnemyInfo(gameState) # refresh enemyInfo, DO NOT DELETE
+    actions = gameState.getLegalActions(self.index)
+    myPos = gameState.getAgentPosition(self.index)
+    mode = self.chooseMode(gameState, myPos)
 
     #print "index=",self.index,"mode=",mode
 
     """A star for escape and retreat"""
-    if mode == "escape":
+    if mode == "goHome" or mode == "escape":
       return self.astar(gameState, myPos, mode)
 
     """Q values for attack and defend"""
@@ -498,7 +546,6 @@ class GeneralAgent(CaptureAgent):
     return random.choice(bestActions)
 
   def astar(self, gameState, myPos, mode):
-    t1=time.time()
     open = util.PriorityQueue()
     closed = set()
     paths = {myPos: [], }
@@ -531,7 +578,6 @@ class GeneralAgent(CaptureAgent):
       #print "no way to escape"
       return Directions.STOP
     else:
-      #print escapePath
       return escapePath[0]
 
   def legalSuccessors(self, pos):
@@ -557,17 +603,22 @@ class GeneralAgent(CaptureAgent):
         enemyDist = min(enemyDist, self.getMazeDistance(mypos, pos))
 
     #print "heuristic() time",time.time()-t1
-    if mode == 'escape': # directly home
-      return goalDist + 5.0/(enemyDist+0.1)
+    if mode == 'goHome': # directly home
+      return goalDist + 10.0/(enemyDist*2+0.1)
     else: # retreat: going back (escape goals or capsule) tending to eat food along the way
       capsules = self.getCapsules(gameState)
       if len(capsules) > 0:
         goalDist = min(goalDist, [self.getMazeDistance(mypos, p) for p in capsules])
-      pickupfood = 0
-      if mypos in self.foodList:
-        pickupfood = 1
-      return goalDist + 5.0/(enemyDist+0.1) + 1.0/(pickupfood+1.0)
+      # pickupfood = 0
+      # if mypos in self.foodList:
+      #   pickupfood = 1
+      return goalDist + 10.0/(enemyDist*2+0.1) #+ 1.0/(pickupfood+1.0)
 
+  def printPath(self, path):
+    if self.index==1:
+      for p in path:
+        print p
+        self.debugDraw(p, [1.0,0,1.0], False)
 
   def getSuccessor(self, gameState, action):
     """
@@ -596,8 +647,8 @@ class GeneralAgent(CaptureAgent):
       features = self.getDefendFeatures(gameState, action)
       weights = self.getDefendWeights(gameState, action)
     elif mode == "retreat":
-      features = self.getEscapeFeatures(gameState, action)
-      weights = self.getEscapeWeights(gameState, action)
+      features = self.getRetreatFeatures(gameState, action)
+      weights = self.getRetreatWeights(gameState, action)
 
     # print(features)
     # print(weights)
@@ -650,7 +701,7 @@ class GeneralAgent(CaptureAgent):
     return features
 
   def getAttackWeights(self, gameState, action):
-    return {'successorScore': 20000, 'distanceToFood': -100, 'distanceToCapsule': -20, 'distanceToEscape': 5,
+    return {'successorScore': 30000, 'distanceToFood': -100, 'distanceToCapsule': -20, 'distanceToEscape': 5,
             'distanceToAlly': 50, 'distanceToEnemy': -5, 'stop': -1000, 'pickupCapsule': 1000, 'deadCorner': -10}
 
   def getDefendFeatures(self, gameState, action):
@@ -662,6 +713,8 @@ class GeneralAgent(CaptureAgent):
     # Computes whether we're on defense (1) or offense (0)，我是怪物=1，我是吃豆人=0
     features['onDefense'] = 1
     if myState.isPacman: features['onDefense'] = 0
+    features['dead']=1
+    if myPos==successor.getInitialAgentPosition(self.index):features['dead']=0
 
     # Computes distance to invaders we can see计算我和可见的敌人的距离
     #getOpponents,获得对手的index
@@ -699,7 +752,7 @@ class GeneralAgent(CaptureAgent):
     Normally, weights do not depend on the gamestate.  They can be either
     a counter or a dictionary.
     """
-    return {'numInvaders': -99999999, 'onDefense': 100, 'invaderDistance': -100, 'stop': -200, 'reverse': -2}
+    return {'numInvaders': -99999999, 'onDefense': 100, 'invaderDistance': -100, 'stop': -200, 'reverse': -2,'dead':99999}
 
   def getGoHomeFeatures(self, gameState, action):
     features = util.Counter()
@@ -711,7 +764,6 @@ class GeneralAgent(CaptureAgent):
     ## Computes whether we're safe
     features['isSafe'] = 1
     if myState.isPacman: features['isSafe'] = 0
-
 
     successor = self.getSuccessor(gameState, action)
     #行动后，自身下一回合的位置
@@ -741,7 +793,7 @@ class GeneralAgent(CaptureAgent):
   def getGoHomeWeights(self, gameState, action):
     return {'isSafe':999,'minDis': 1, 'distanceFromStart': -2,'critical':-999}
 
-  def getEscapeFeatures(self, gameState, action):
+  def getRetreatFeatures(self, gameState, action):
     features = util.Counter()
     successor = self.getSuccessor(gameState, action)
     myState = successor.getAgentState(self.index)
@@ -769,9 +821,7 @@ class GeneralAgent(CaptureAgent):
     myState = successor.getAgentState(self.index)
     myPos = myState.getPosition()
     #自身到达中线的最近距离
-    distanceFromStart = min([self.getMazeDistance(myPos, (self.midWidth, i))
-                             for i in range(gameState.data.layout.height)
-                             if (self.midWidth, i) in self.legalPositions])
+    distanceFromStart = min([self.getMazeDistance(myPos, pos) for pos in self.escapeGoals])
     #如果“药丸”>0
     if len(self.getCapsules(gameState))>0:
       distanceFromCapsuls=min([self.getMazeDistance(myPos, p) for p in self.getCapsules(gameState)])
@@ -779,22 +829,28 @@ class GeneralAgent(CaptureAgent):
       distanceFromStart=min(distanceFromStart,distanceFromCapsuls)
     #我与最近的“敌方ghost”的距离
     enemyIndex,minDis=self.getNearestGhost(myPos,successor)
+    features['distanceFromStart']=distanceFromStart
     if(gameState.getAgentState(enemyIndex).scaredTimer>0):
       features["mindDis"]=0
       features["critical"]=0
     else:
       features["mindDis"]=minDis
-      features['distanceFromStart']=distanceFromStart
       if minDis>2:
         features["critical"]=0
       else:
         features["critical"]=1
+
+    #战略撤退，查看到最近food的距离，越小越好
+    features["foodDist"] = min([self.getMazeDistance(myPos, food)for food in self.foodList])
+    #战略撤退，下一步吃豆，给很高的权重去吃豆
+    successorFoodList = self.getFood(successor).asList()
+    features["pickupFood"] = len(self.foodList) - len(successorFoodList)
     #print "action",action
     #print features
     return features
 
-  def getEscapeWeights(self, gameState, action):
-    return {'isSafe':999,'minDis': 1, 'distanceFromStart': -2,'critical':-999}
+  def getRetreatWeights(self, gameState, action):
+    return {'isSafe':500,'minDis': 1, 'distanceFromStart': -2,'critical':-1000, 'pickupFood': 200}
 
 
 class TopAgent(GeneralAgent):
