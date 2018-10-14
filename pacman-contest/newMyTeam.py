@@ -506,7 +506,7 @@ class GeneralAgent(CaptureAgent):
     mode=self.chooseMode(gameState)
     carrying = gameState.getAgentState(self.index).numCarrying
     myPos = gameState.getAgentPosition(self.index)
-    print "index=",self.index,"mode=",mode,"foodCarring=",carrying,"myPosition=",myPos
+    #print "index=",self.index,"mode=",mode,"foodCarring=",carrying,"myPosition=",myPos
     #print "ourMode=",ourMode
 
     values = [self.evaluate(gameState, a, mode) for a in actions]
@@ -552,9 +552,9 @@ class GeneralAgent(CaptureAgent):
       
      #print(features)
     # print(weights)
-    print features
-    print "action=[",action," ] value=",features * weights
-    print 
+    #print features
+    #print "action=[",action," ] value=",features * weights
+    #print 
     return features * weights
 
   def getAttackFeatures(self, gameState, action):

@@ -119,7 +119,7 @@ class GeneralAgent(CaptureAgent):
       self.beliefs[enemy] = util.Counter()
       self.beliefs[enemy][gameState.getInitialAgentPosition(enemy)] = 1.0
 
-  def predictProbabilityOfPositionAfterAction(self,enemyIndex,gameState):
+  def getExpectedValue(self,enemyIndex,gameState):
     new_belief = util.Counter()
     for p in self.legalPositions:
       # Get the new probability distribution.
@@ -139,34 +139,34 @@ class GeneralAgent(CaptureAgent):
     myPos = gameState.getAgentPosition(self.index)
     new_belief = util.Counter()
 
-    for p in self.legalPositions:
-      trueManhattanDistance = util.manhattanDistance(myPos, p)
+    for pos in self.legalPositions:
+      trueManhattanDistance = util.manhattanDistance(myPos, pos)
       confidence = gameState.getDistanceProb(trueManhattanDistance, noisyDistance)
       #排除不可能的概率
       if self.red:
-        pac = p[0] < self.midWidth
+        pac = pos[0] < self.midWidth
       else:
-        pac = p[0] > self.midWidth
+        pac = pos[0] > self.midWidth
       #1，对方不可能在范围5之内，因为他如果在，我就已经得到它得精确距离了。
       if trueManhattanDistance <= 5:
-        new_belief[p] = 0.
+        new_belief[pos] = 0.
       #2，通过敌方agent的身份，判断其不可能在地图左/右侧
       elif pac != gameState.getAgentState(enemyIndex).isPacman:
-        new_belief[p] = 0.
+        new_belief[pos] = 0.
       else:
-        new_belief[p] = self.beliefs[enemyIndex][p] * confidence
+        new_belief[pos] = self.beliefs[enemyIndex][pos] * confidence
 
     if new_belief.totalCount() == 0:
       self.beliefs[enemyIndex] = util.Counter()
-      for p in self.legalPositions:
-        self.beliefs[enemyIndex][p] = 1.0
+      for pos in self.legalPositions:
+        self.beliefs[enemyIndex][pos] = 1.0
       self.beliefs[enemyIndex].normalize()
     else:
       new_belief.normalize()
       self.beliefs[enemyIndex] = new_belief
 
   def getMostLikelyPosition(self,enemyIndex,gameState):
-    self.predictProbabilityOfPositionAfterAction(enemyIndex,gameState)
+    self.getExpectedValue(enemyIndex,gameState)
     self.computeProbabilityDistribution(enemyIndex,gameState)
     #print "the most likely position of enemy=",enemyIndex,"is",self.beliefs[enemyIndex].argMax()
     currentFoodList = self.getFoodYouAreDefending(gameState).asList()
@@ -528,7 +528,7 @@ class GeneralAgent(CaptureAgent):
     myPos = gameState.getAgentPosition(self.index)
     mode = self.chooseMode(gameState, myPos)
 
-    #print "index=",self.index,"mode=",mode
+    #print "index=",self.index,"mode=",mode,"Position=",myPos
 
     """A star for escape and retreat"""
     if mode == "goHome" or mode == "retreat":
@@ -543,6 +543,7 @@ class GeneralAgent(CaptureAgent):
     #更新旧的食物列表
     currentFoodList = self.getFoodYouAreDefending(gameState).asList()
     self.lastTurnFoodList=list(currentFoodList)
+    #print "\n"
     return random.choice(bestActions)
 
   def astar(self, gameState, myPos, mode):
@@ -576,8 +577,10 @@ class GeneralAgent(CaptureAgent):
     #print "escapeAction() time",time.time()-t1
     if len(escapePath) == 0:
       #print "no way to escape"
+      
       return Directions.STOP
     else:
+      #print escapePath[0]
       return escapePath[0]
 
   def legalSuccessors(self, pos):
@@ -614,11 +617,11 @@ class GeneralAgent(CaptureAgent):
       #   pickupfood = 1
       return goalDist + 10.0/(enemyDist*2+0.1) #+ 1.0/(pickupfood+1.0)
 
-  def printPath(self, path):
-    if self.index==1:
-      for p in path:
-        print p
-        self.debugDraw(p, [1.0,0,1.0], False)
+  #def printPath(self, path):
+  #  if self.index==1:
+  #    for p in path:
+  #      print p
+  #      self.debugDraw(p, [1.0,0,1.0], False)
 
   def getSuccessor(self, gameState, action):
     """
@@ -650,8 +653,9 @@ class GeneralAgent(CaptureAgent):
       features = self.getRetreatFeatures(gameState, action)
       weights = self.getRetreatWeights(gameState, action)
 
-    # print(features)
-    # print(weights)
+    #print action,mode
+    #print(features)
+    #print features * weights    
 
     return features * weights
 
