@@ -496,7 +496,7 @@ class GeneralAgent(CaptureAgent):
             #print "@@@@@@@@@@@@@@@@@@@@@@@@i choose attack by bravery@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
             return 'attack'
           else:
-            mode = 'escape'
+            mode = 'retreat'
       #as a ghost, defend only if not so scared
       #如果我是怪物，并且没有进入“害怕状态”
       elif myScaredTimer == 0:
@@ -531,7 +531,7 @@ class GeneralAgent(CaptureAgent):
     #print "index=",self.index,"mode=",mode
 
     """A star for escape and retreat"""
-    if mode == "goHome" or mode == "escape":
+    if mode == "goHome" or mode == "retreat":
       return self.astar(gameState, myPos, mode)
 
     """Q values for attack and defend"""
