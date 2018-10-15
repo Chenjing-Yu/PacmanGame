@@ -531,7 +531,7 @@ class GeneralAgent(CaptureAgent):
     #print "index=",self.index,"mode=",mode
 
     """A star for escape and retreat"""
-    if mode == "goHome" or mode == "escape":
+    if mode == "goHome" or mode == "retreat":
       return self.astar(gameState, myPos, mode)
 
     """Q values for attack and defend"""
