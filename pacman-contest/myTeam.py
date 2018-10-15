@@ -1,4 +1,4 @@
-﻿# -*- coding:utf-8 -*-
+# -*- coding:utf-8 -*-
 # baselineTeam.py
 # ---------------
 # Licensing Information:  You are free to use or extend these projects for
@@ -487,8 +487,7 @@ class GeneralAgent(CaptureAgent):
     self.getEnemyInfo(gameState) # refresh enemyInfo, DO NOT DELETE
     actions = gameState.getLegalActions(self.index)
     myPos = gameState.getAgentPosition(self.index)
-    mode = self.chooseMode(gameState, myPos)
-    
+    mode = self.chooseMode(gameState, myPos) 
 
     #print "index=",self.index,"mode=",mode,"Position=",myPos
 
@@ -679,7 +678,11 @@ class GeneralAgent(CaptureAgent):
     if myState.isPacman: features['onDefense'] = 0
     features['dead']=1
     if myPos==successor.getInitialAgentPosition(self.index):features['dead']=0
-
+    ghostIndex,ghostDis=self.getNearestGhost(myPos,successor)
+    if myState.isPacman and ghostDis==1 and successor.getAgentState(ghostIndex).scaredTimer==0:
+      features['dead']=0
+    if successor.getAgentState(ghostIndex).scaredTimer>3:
+      if myState.isPacman: features['onDefense'] = 2
     # Computes distance to invaders we can see
     #getOpponents index
     enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
@@ -822,4 +825,3 @@ class BottomAgent(GeneralAgent):
   def registerInitialState(self, gameState):
     GeneralAgent.registerInitialState(self, gameState)
     self.favoredY = 0
-0
