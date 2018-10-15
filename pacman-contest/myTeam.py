@@ -487,8 +487,7 @@ class GeneralAgent(CaptureAgent):
     self.getEnemyInfo(gameState) # refresh enemyInfo, DO NOT DELETE
     actions = gameState.getLegalActions(self.index)
     myPos = gameState.getAgentPosition(self.index)
-    mode = self.chooseMode(gameState, myPos)
-    
+    mode = self.chooseMode(gameState, myPos) 
 
     #print "index=",self.index,"mode=",mode,"Position=",myPos
 
