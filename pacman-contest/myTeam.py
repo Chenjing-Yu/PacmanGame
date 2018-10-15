@@ -1,4 +1,4 @@
-﻿# -*- coding:utf-8 -*-
+# -*- coding:utf-8 -*-
 # baselineTeam.py
 # ---------------
 # Licensing Information:  You are free to use or extend these projects for
@@ -825,4 +825,3 @@ class BottomAgent(GeneralAgent):
   def registerInitialState(self, gameState):
     GeneralAgent.registerInitialState(self, gameState)
     self.favoredY = 0
-0
