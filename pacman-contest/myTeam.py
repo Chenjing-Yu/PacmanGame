@@ -301,11 +301,6 @@ class GeneralAgent(CaptureAgent):
         pos=self.getMostLikelyPosition(i,gameState)
         positions.append((i,pos))
 
-      # if self.index==1:
-      #   if i==0 :
-      #     self.debugDraw(pos, [1,0,0], True)
-      #   else:
-      #     self.debugDraw(pos, [1,0.5,0], False)
 
     return positions
 
@@ -314,13 +309,6 @@ class GeneralAgent(CaptureAgent):
     return the (index,distance)s of enemies
     """
     dists = []
-    # for i in self.enemies:
-    #   pos = gameState.getAgentPosition(i)
-    #   if pos == None:
-    #     #dists.append((i, gameState.getAgentDistances()[i]))#todo: belief most likely distance
-    #     dists.append((i, self.getMostLikelyMazeDistance(i,gameState)))
-    #   else:
-    #     dists.append((i, self.getMazeDistance(myPos, pos)))
     for i, pos, isPacman, scaredTimer in self.enemyInfo:
       dists.append(self.getMazeDistance(myPos, pos))
     return dists
@@ -342,11 +330,6 @@ class GeneralAgent(CaptureAgent):
       else:
         pos = self.getMostLikelyPosition(i, gameState)
       info.append((i, pos, gameState.getAgentState(i).isPacman, gameState.getAgentState(i).scaredTimer))
-    # if(self.index==1):
-    #   if(i==0):
-    #     self.debugDraw(pos, [1,0,0], True)
-    #   else:
-    #     self.debugDraw(pos, [1,0.5,0], False)
     self.enemyInfo = info
 
   def getNearestGhost(self, myPos, gameState):
@@ -460,9 +443,9 @@ class GeneralAgent(CaptureAgent):
           #if i and ally are both pacman
           else:
             #if i carring more food than ally
-            if(gameState.getAgentState(self.index).numCarrying>gameState.getAgentState(self.ally).numCarrying):
+            if(carrying>gameState.getAgentState(self.ally).numCarrying):
               return 'goHome'#"goHome"
-            if(gameState.getAgentState(self.index).numCarrying==gameState.getAgentState(self.ally).numCarrying):
+            if(carrying==gameState.getAgentState(self.ally).numCarrying):
               if (self.index>self.ally):
                 return 'goHome'#"goHome"
       #if i am scared, just be a pacman and eat foot
@@ -510,8 +493,11 @@ class GeneralAgent(CaptureAgent):
     #print "index=",self.index,"mode=",mode,"Position=",myPos
 
     """A star for escape and retreat"""
-    if mode == "goHome" or mode == "retreat":
-      return self.astar(gameState, myPos, mode)
+    if mode == "goHome":
+      return self.astar(gameState, myPos, mode, self.escapeGoals)
+    if mode == "retreat":
+      capsules = self.getCapsules(gameState)
+      return self.astar(gameState, myPos, mode, self.escapeGoals+capsules)
 
     """values for attack and defend"""
     values = [self.evaluate(gameState, a, mode) for a in actions]
@@ -521,21 +507,26 @@ class GeneralAgent(CaptureAgent):
     #update the foodList i monitoring
     currentFoodList = self.getFoodYouAreDefending(gameState).asList()
     self.lastTurnFoodList=list(currentFoodList)
-    #print "\n"
     return random.choice(bestActions)
 
-  def astar(self, gameState, myPos, mode):
+  def astar(self, gameState, myPos, mode, goals):
     open = util.PriorityQueue()
     closed = set()
     paths = {myPos: [], }
+    #for debug
+    debugRoute = {myPos: [], }
+    #for debug end
     open.push(myPos, 0)
     escapePath = []
     while open:
       pos = open.pop()
       actions = paths[pos]
       cost = len(actions)
-      if pos in self.escapeGoals:
+      if pos in goals:
         escapePath = paths[pos]
+        #for debug
+        debugPositions = debugRoute[pos]
+        #for debug end
         break
       if pos not in closed:
         closed.add(pos)
@@ -548,9 +539,15 @@ class GeneralAgent(CaptureAgent):
               if nextCost < len(paths[nextpos]) + self.heuristic(gameState, nextpos, mode):
                 open.update(nextpos, nextCost)
                 paths[nextpos] = nextActions
+                #for debug
+                debugRoute[nextpos] = debugRoute[pos] + [nextpos]
+                #for debug end
             else:
               open.push(nextpos, nextCost)
               paths[nextpos] = nextActions
+              #for debug
+              debugRoute[nextpos] = debugRoute[pos] + [nextpos]
+              #for debug end
 
     #print "escapeAction() time",time.time()-t1
     if len(escapePath) == 0:
@@ -558,7 +555,6 @@ class GeneralAgent(CaptureAgent):
       
       return Directions.STOP
     else:
-      #print escapePath[0]
       return escapePath[0]
 
   def legalSuccessors(self, pos):
@@ -585,7 +581,10 @@ class GeneralAgent(CaptureAgent):
 
     #print "heuristic() time",time.time()-t1
     if mode == 'goHome': # directly home
-      return goalDist + 10.0/(enemyDist*2+0.1)
+      if enemyDist == 0:
+        return 999 #dead
+      else:
+        return goalDist + 10.0/((enemyDist-1)*2+0.1)
     else: # retreat: going back (escape goals or capsule) tending to eat food along the way
       capsules = self.getCapsules(gameState)
       if len(capsules) > 0:
@@ -593,13 +592,11 @@ class GeneralAgent(CaptureAgent):
       # pickupfood = 0
       # if mypos in self.foodList:
       #   pickupfood = 1
-      return goalDist + 10.0/(enemyDist*2+0.1) #+ 1.0/(pickupfood+1.0)
+      if enemyDist == 0:
+        return 999 #dead
+      else:
+        return goalDist + 10.0/((enemyDist-1)*2+0.1) #+ 1.0/(pickupfood+1.0)
 
-  #def printPath(self, path):
-  #  if self.index==1:
-  #    for p in path:
-  #      print p
-  #      self.debugDraw(p, [1.0,0,1.0], False)
 
   def getSuccessor(self, gameState, action):
     """
@@ -631,9 +628,6 @@ class GeneralAgent(CaptureAgent):
       features = self.getRetreatFeatures(gameState, action)
       weights = self.getRetreatWeights(gameState, action)
 
-    #print action,mode
-    #print(features)
-    #print features * weights    
 
     return features * weights
 

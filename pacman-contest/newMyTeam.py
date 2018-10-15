@@ -737,7 +737,7 @@ class GeneralAgent(CaptureAgent):
     if(gameState.getAgentState(enemyIndex).scaredTimer>0):
       features["mindDis"]=0
       features["critical"]=0
-      print "enemy is scared, index=",enemyIndex
+      #print "enemy is scared, index=",enemyIndex
     else:
       features["mindDis"]=minDis
       if minDis>2:

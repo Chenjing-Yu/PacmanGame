@@ -522,6 +522,7 @@ class GeneralAgent(CaptureAgent):
     Picks among the actions with the highest Q(s,a).
     选择Q（s,a）值最高的actions.
     """
+    t=time.time()
     self.Timer = self.Timer - 1
     self.getEnemyInfo(gameState) # refresh enemyInfo, DO NOT DELETE
     actions = gameState.getLegalActions(self.index)
@@ -532,9 +533,11 @@ class GeneralAgent(CaptureAgent):
 
     """A star for escape and retreat"""
     if mode == "goHome":
+      print time.time()-t
       return self.astar(gameState, myPos, mode, self.escapeGoals)
     if mode == "retreat":
       capsules = self.getCapsules(gameState)
+      print time.time()-t
       return self.astar(gameState, myPos, mode, self.escapeGoals+capsules)
 
     """Q values for attack and defend"""
@@ -546,6 +549,7 @@ class GeneralAgent(CaptureAgent):
     #更新旧的食物列表
     currentFoodList = self.getFoodYouAreDefending(gameState).asList()
     self.lastTurnFoodList=list(currentFoodList)
+    print time.time()-t
     return random.choice(bestActions)
 
   def astar(self, gameState, myPos, mode, goals):
