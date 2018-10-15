@@ -678,7 +678,11 @@ class GeneralAgent(CaptureAgent):
     if myState.isPacman: features['onDefense'] = 0
     features['dead']=1
     if myPos==successor.getInitialAgentPosition(self.index):features['dead']=0
-
+    ghostIndex,ghostDis=self.getNearestGhost(myPos,successor)
+    if myState.isPacman and ghostDis==1 and successor.getAgentState(ghostIndex).scaredTimer==0:
+      features['dead']=0
+    if successor.getAgentState(ghostIndex).scaredTimer>3:
+      if myState.isPacman: features['onDefense'] = 2
     # Computes distance to invaders we can see
     #getOpponents index
     enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
