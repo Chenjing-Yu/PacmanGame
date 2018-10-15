@@ -531,8 +531,11 @@ class GeneralAgent(CaptureAgent):
     #print "index=",self.index,"mode=",mode
 
     """A star for escape and retreat"""
-    if mode == "goHome" or mode == "retreat":
-      return self.astar(gameState, myPos, mode)
+    if mode == "goHome":
+      return self.astar(gameState, myPos, mode, self.escapeGoals)
+    if mode == "retreat":
+      capsules = self.getCapsules(gameState)
+      return self.astar(gameState, myPos, mode, self.escapeGoals+capsules)
 
     """Q values for attack and defend"""
     values = [self.evaluate(gameState, a, mode) for a in actions]
@@ -545,7 +548,7 @@ class GeneralAgent(CaptureAgent):
     self.lastTurnFoodList=list(currentFoodList)
     return random.choice(bestActions)
 
-  def astar(self, gameState, myPos, mode):
+  def astar(self, gameState, myPos, mode, goals):
     t1=time.time()
     open = util.PriorityQueue()
     closed = set()
@@ -559,7 +562,7 @@ class GeneralAgent(CaptureAgent):
       pos = open.pop()
       actions = paths[pos]
       cost = len(actions)
-      if pos in self.escapeGoals:
+      if pos in goals:
         escapePath = paths[pos]
         #for debug
         debugPositions = debugRoute[pos]
