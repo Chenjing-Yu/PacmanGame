@@ -741,6 +741,13 @@ class GeneralAgent(CaptureAgent):
     if myState.isPacman: features['onDefense'] = 0
     features['dead']=1
     if myPos==successor.getInitialAgentPosition(self.index):features['dead']=0
+    elif myState.isPacman:
+        enemyBothScared = True
+        for i, pos, ePacman, stimer in self.enemyInfo:
+            if self.getMazeDistance(myPos, pos) < 2 and not ePacman and stimer < 3:
+                features['dead']=0
+                enemyBothScared = False
+        if enemyBothScared: features['onDefense'] = 1
 
     # Computes distance to invaders we can see计算我和可见的敌人的距离
     #getOpponents,获得对手的index
