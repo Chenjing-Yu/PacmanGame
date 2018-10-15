@@ -1,8 +1,9 @@
 {
   "ExpandedNodes": [
     "",
-    "\\pacman-contest"
+    "\\pacman-contest",
+    "\\pacman-contest\\layouts"
   ],
-  "SelectedNode": "\\pacman-contest\\OtherTeam1.py",
+  "SelectedNode": "\\pacman-contest\\newMyTeam.py",
   "PreviewInSolutionExplorer": false
 }
