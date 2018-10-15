@@ -477,7 +477,7 @@ class GeneralAgent(CaptureAgent):
             #如果我比队友携带的豆多，我就回家
             if(carrying>gameState.getAgentState(self.ally).numCarrying):
               return 'goHome'#"goHome"
-            if(carrying.numCarrying==gameState.getAgentState(self.ally).numCarrying):
+            if(carrying==gameState.getAgentState(self.ally).numCarrying):
               if (self.index>self.ally):
                 return 'goHome'#"goHome"
       #恐惧状态下，我去吃豆
