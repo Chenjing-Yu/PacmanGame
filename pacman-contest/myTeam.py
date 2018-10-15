@@ -512,9 +512,6 @@ class GeneralAgent(CaptureAgent):
     open = util.PriorityQueue()
     closed = set()
     paths = {myPos: [], }
-    #for debug
-    debugRoute = {myPos: [], }
-    #for debug end
     open.push(myPos, 0)
     escapePath = []
     while open:
@@ -523,9 +520,6 @@ class GeneralAgent(CaptureAgent):
       cost = len(actions)
       if pos in goals:
         escapePath = paths[pos]
-        #for debug
-        debugPositions = debugRoute[pos]
-        #for debug end
         break
       if pos not in closed:
         closed.add(pos)
@@ -538,15 +532,9 @@ class GeneralAgent(CaptureAgent):
               if nextCost < len(paths[nextpos]) + self.heuristic(gameState, nextpos, mode):
                 open.update(nextpos, nextCost)
                 paths[nextpos] = nextActions
-                #for debug
-                debugRoute[nextpos] = debugRoute[pos] + [nextpos]
-                #for debug end
             else:
               open.push(nextpos, nextCost)
               paths[nextpos] = nextActions
-              #for debug
-              debugRoute[nextpos] = debugRoute[pos] + [nextpos]
-              #for debug end
 
     #print "escapeAction() time",time.time()-t1
     if len(escapePath) == 0:
