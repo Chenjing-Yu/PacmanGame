@@ -475,9 +475,9 @@ class GeneralAgent(CaptureAgent):
           #如果我俩都在敌人地盘上
           else:
             #如果我比队友携带的豆多，我就回家
-            if(gameState.getAgentState(self.index).numCarrying>gameState.getAgentState(self.ally).numCarrying):
+            if(carrying>gameState.getAgentState(self.ally).numCarrying):
               return 'goHome'#"goHome"
-            if(gameState.getAgentState(self.index).numCarrying==gameState.getAgentState(self.ally).numCarrying):
+            if(carrying.numCarrying==gameState.getAgentState(self.ally).numCarrying):
               if (self.index>self.ally):
                 return 'goHome'#"goHome"
       #恐惧状态下，我去吃豆
@@ -512,7 +512,7 @@ class GeneralAgent(CaptureAgent):
       #如果敌方ghost距离我的距离大于我距离豆的距离，那么继续吃豆
       if self.getNearestGhost(myPos,gameState)[1]>nearestFoodDistance+1:
         #print "@@@@@@@@@@@@@@@@@@@@@@@@i have overload@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"
-        return 'attack'
+        return 'attack'#greedy
       else:
         mode = 'retreat'#"goHome"#todo: not just escape, but going towards middle, still eating food
     return mode
@@ -621,7 +621,10 @@ class GeneralAgent(CaptureAgent):
 
     #print "heuristic() time",time.time()-t1
     if mode == 'goHome': # directly home
-      return goalDist + 10.0/(enemyDist*2+0.1)
+      if enemyDist == 0:
+        return 999 #dead
+      else:
+        return goalDist + 10.0/((enemyDist-1)*2+0.1)
     else: # retreat: going back (escape goals or capsule) tending to eat food along the way
       capsules = self.getCapsules(gameState)
       if len(capsules) > 0:
@@ -629,7 +632,10 @@ class GeneralAgent(CaptureAgent):
       # pickupfood = 0
       # if mypos in self.foodList:
       #   pickupfood = 1
-      return goalDist + 10.0/(enemyDist*2+0.1) #+ 1.0/(pickupfood+1.0)
+      if enemyDist == 0:
+        return 999 #dead
+      else:
+        return goalDist + 10.0/((enemyDist-1)*2+0.1) #+ 1.0/(pickupfood+1.0)
 
   def printPath(self, path):
     self.debugClear()
